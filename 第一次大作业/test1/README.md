@@ -34,7 +34,7 @@ cp .env.example .env
 ```
 - 启动服务  
 ```bash
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 浏览器访问 `http://127.0.0.1:8000/`（静态页）、API 文档 `http://127.0.0.1:8000/docs`。
