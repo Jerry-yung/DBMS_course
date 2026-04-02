@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>编辑问卷</title>
+  <link rel="stylesheet" href="/common.css" />
+  <link rel="stylesheet" href="/edit.css" />
+</head>
+<body class="app-editor">
+  <div class="edit-toolbar">
+    <div class="toolbar-left">
+      <div class="toolbar-title-row">
+        <h1 class="toolbar-title" id="toolbarTitle">问卷编辑</h1>
+        <span class="status-badge status-draft" id="statusBadge" title="问卷状态">
+          <span class="dot"></span>
+          <span id="statusText">草稿</span>
+        </span>
+      </div>
+      <div class="shortcode-row hidden" id="shortcodeRow">
+        <span>短码</span>
+        <code id="shortcodeValue"></code>
+        <button type="button" class="btn-toolbar" id="copyLinkBtn">复制问卷链接</button>
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <a class="btn-toolbar" href="/index.html">返回列表</a>
+      <button type="button" class="btn-toolbar" id="btnPreview">预览</button>
+      <button type="button" class="btn-toolbar" id="btnStats">统计</button>
+      <button type="button" class="btn-toolbar primary" id="btnPublish">发布</button>
+      <button type="button" class="btn-toolbar hidden" id="btnCloseSurvey">关闭问卷</button>
+      <button type="button" class="btn-toolbar danger-outline" id="btnDeleteSurvey">删除问卷</button>
+      <button type="button" class="btn-toolbar primary" id="btnSave">保存</button>
+    </div>
+  </div>
+
+  <div class="edit-main">
+    <aside class="card sidebar-card">
+      <div class="card-section">
+        <h3>问卷设置</h3>
+        <div class="form-group">
+          <label>问卷标题 <span style="color:#f87171">*</span> <span class="char-count"><span id="charCount">0</span>/200</span></label>
+          <input type="text" id="title" maxlength="200" placeholder="请输入问卷标题" />
+        </div>
+        <div class="form-group">
+          <label>问卷说明</label>
+          <textarea id="description" rows="4" placeholder="选填，受访者可见"></textarea>
+        </div>
+        <div class="form-group">
+          <label>截止时间</label>
+          <input type="datetime-local" id="deadline" />
+          <div class="hint">留空表示不限制</div>
+        </div>
+        <div class="check-line">
+          <input type="checkbox" id="allowMultiple" checked />
+          <label for="allowMultiple" style="margin:0">允许同一用户多次填写</label>
+        </div>
+        <div class="check-line">
+          <input type="checkbox" id="allowAnonymous" />
+          <label for="allowAnonymous" style="margin:0">允许匿名填写</label>
+        </div>
+        <div class="form-group">
+          <label>提交后感谢语</label>
+          <input type="text" id="thankYouMessage" placeholder="感谢您的参与！" />
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <div class="card">
+        <div class="questions-header">
+          <h3>题目列表</h3>
+          <div class="row" style="gap:0.45rem;flex-wrap:wrap">
+            <button type="button" class="btn-toolbar primary" id="btnAddQuestion">+ 添加题目</button>
+            <button type="button" class="btn-toolbar" id="btnToggleSort">排序模式</button>
+          </div>
+        </div>
+        <div id="questionsContainer" class="questions-container"></div>
+        <p class="empty-hint hidden" id="questionsEmpty">暂无题目，点击「添加题目」开始。</p>
+      </div>
+
+      <div class="card jump-rules-block">
+        <div class="questions-header">
+          <h3>跳转规则</h3>
+          <button type="button" class="btn-toolbar" id="btnAddJumpRule">+ 添加规则</button>
+        </div>
+        <p class="hint" style="margin:0 0 0.75rem;font-size:0.8rem;color:#64748b">
+          按优先级从高到低匹配；无匹配则顺序进入下一题。发布前会检测是否存在死循环。
+        </p>
+        <div id="jumpRulesContainer"></div>
+        <p class="empty-hint hidden" id="jumpRulesEmpty">暂无跳转规则。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 题目弹窗 -->
+  <div class="modal-overlay" id="questionModal" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="questionModalTitle">添加题目</h3>
+        <button type="button" class="modal-close" data-close-modal="questionModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>题目标题 *</label>
+          <input type="text" id="qmTitle" placeholder="请输入题目标题" />
+        </div>
+        <div class="form-group">
+          <label>题型</label>
+          <select id="qmType">
+            <option value="single_choice">单选题</option>
+            <option value="multiple_choice">多选题</option>
+            <option value="text">文本填空</option>
+            <option value="number">数字填空</option>
+          </select>
+        </div>
+        <div class="check-line">
+          <input type="checkbox" id="qmRequired" />
+          <label for="qmRequired" style="margin:0">必答</label>
+        </div>
+        <div id="qmOptionsBlock" class="form-group">
+          <label>选项</label>
+          <div class="option-rows" id="qmOptionsList"></div>
+          <button type="button" class="btn-toolbar" id="qmAddOption" style="margin-top:0.4rem">+ 添加选项</button>
+        </div>
+        <div id="qmValidationBlock" class="validation-block">
+          <h4>校验规则</h4>
+          <div id="qmValMulti" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最少选</label>
+                <input type="number" id="qmMinSelect" min="0" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最多选</label>
+                <input type="number" id="qmMaxSelect" min="0" placeholder="可选" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>精确选几项（留空不限制）</label>
+              <input type="number" id="qmExactSelect" min="0" placeholder="可选" />
+            </div>
+          </div>
+          <div id="qmValText" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最少字数</label>
+                <input type="number" id="qmMinLength" min="0" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最多字数</label>
+                <input type="number" id="qmMaxLength" min="0" placeholder="可选" />
+              </div>
+            </div>
+          </div>
+          <div id="qmValNumber" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最小值</label>
+                <input type="number" id="qmMinValue" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最大值</label>
+                <input type="number" id="qmMaxValue" placeholder="可选" />
+              </div>
+            </div>
+            <div class="check-line">
+              <input type="checkbox" id="qmIntegerOnly" />
+              <label for="qmIntegerOnly" style="margin:0">必须为整数</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="questionModal">取消</button>
+        <button type="button" class="btn-toolbar primary" id="qmSave">保存题目</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 预览弹窗 -->
+  <div class="modal-overlay" id="previewModal" aria-hidden="true">
+    <div class="modal-box preview-wide">
+      <div class="modal-header">
+        <h3>问卷预览</h3>
+        <button type="button" class="modal-close" data-close-modal="previewModal">&times;</button>
+      </div>
+      <div class="modal-body preview-body" id="previewBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="previewModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <script src="/api.js"></script>
+  <script src="/edit.js"></script>
+</body>
+</html>
