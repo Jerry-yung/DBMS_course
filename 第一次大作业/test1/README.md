@@ -41,7 +41,7 @@ python -m uvicorn app.main:app --reload --port 8000
 
 - 登录注册
 ```markdown
-点击右上角 `登录` 按钮进行登录 / 注册
+点击右上角 `登录` 或 `注册` 按钮进行登录 / 注册
 ```
 
 ## 测试
