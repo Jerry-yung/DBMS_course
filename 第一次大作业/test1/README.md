@@ -25,7 +25,7 @@ source .venv/bin/activate   # Windows 系统: .venv\Scripts\activate
 ```
 - 安装依赖  
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt  # 或 python -m pip install -r requirements.txt
 ```
 - 拷贝环境变量模板并按需修改  
 ```bash
