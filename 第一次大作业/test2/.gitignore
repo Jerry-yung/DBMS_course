@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+.pytest_cache/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率（若以后启用）
+.coverage
+htmlcov/
+
+# 类型检查 / 打包缓存（若以后启用）
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
