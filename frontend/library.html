@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>题库管理</title>
+  <link rel="stylesheet" href="/common.css" />
+  <link rel="stylesheet" href="/edit.css" />
+  <style>
+    .lib-page { max-width: 980px; margin: 1rem auto; padding: 0 0.5rem; }
+    .panel { border: 1px solid #243044; border-radius: 8px; background: rgba(15,20,25,.35); padding: 1rem; }
+    .lib-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .bank-card { border: 1px solid #2d3b4f; border-radius: 8px; padding: .75rem .9rem; margin-bottom: .65rem; }
+    .bank-card-shared-inbox {
+      border-color: #7c3aed;
+      background: linear-gradient(135deg, rgba(88, 28, 135, 0.22) 0%, rgba(15, 23, 42, 0.75) 100%);
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.25);
+    }
+    .bank-card-shared-inbox strong { color: #e9d5ff; }
+    .bank-desc-inbox { font-size: .82rem; color: #c4b5fd; margin-top: .35rem; line-height: 1.4; max-width: 42rem; }
+    .item-card { border: 1px solid #2d3b4f; border-radius: 8px; padding: .75rem .9rem; margin-bottom: .65rem; background: rgba(20,26,34,.6); }
+    .item-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin-bottom: .45rem; }
+    .badge { font-size: .72rem; padding: .1rem .45rem; border-radius: 4px; font-weight: 600; }
+    .badge-mine { background: #14532d; color: #bbf7d0; }
+    .badge-shared { background: #1e3a5f; color: #93c5fd; }
+    .mono { font-family: ui-monospace, monospace; color: #94a3b8; font-size: .76rem; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .45rem; }
+    .actions-tail { margin-left: auto; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .btn-lib-del { border-color: #991b1b !important; color: #fecaca !important; background: rgba(127,29,29,.22) !important; }
+    .btn-lib-share { border-color: #166534 !important; color: #bbf7d0 !important; background: rgba(22,101,52,.25) !important; }
+    .lib-stats-summary { font-size: .88rem; color: #cbd5e1; margin: 0 0 .65rem; line-height: 1.45; }
+    .lib-stats-table-wrap { max-height: 40vh; overflow: auto; border: 1px solid #334155; border-radius: 6px; margin-top: .5rem; }
+    .lib-stats-table-wrap table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+    .lib-stats-table-wrap th, .lib-stats-table-wrap td { padding: .32rem .4rem; border-bottom: 1px solid #334155; text-align: left; vertical-align: top; }
+    .lib-stats-table-wrap thead th { position: sticky; top: 0; background: #1e293b; z-index: 1; }
+    .hidden { display: none !important; }
+    .empty { padding: 1rem; text-align: center; border: 1px dashed #334155; border-radius: 8px; color: #94a3b8; font-size: .9rem; }
+    #toastLib { position: fixed; bottom: 1rem; right: 1rem; padding: 0.5rem 0.85rem; border-radius: 6px; z-index: 300; }
+    #toastLib.show { background: #14532d; color: #bbf7d0; }
+    #toastLib.err { background: #7f1d1d; color: #fecaca; }
+    .lib-info-pre { max-height: 62vh; overflow: auto; font-size: .82rem; margin: 0; padding: .75rem; background: #0f1419; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+    .bank-check-list { display:flex; flex-direction:column; gap:.35rem; max-height: 14rem; overflow:auto; }
+    .lib-sl-bank-row {
+      display: flex;
+      align-items: flex-start;
+      gap: .55rem;
+      padding: .45rem .35rem;
+      border-bottom: 1px solid #243044;
+      cursor: pointer;
+      font-size: .9rem;
+    }
+    .lib-sl-bank-row:last-child { border-bottom: none; }
+    .lib-sl-bank-row input[type="checkbox"] {
+      width: auto !important;
+      max-width: none;
+      flex: 0 0 auto;
+      margin-top: .2rem;
+    }
+    .lib-sl-bank-name {
+      color: #e2e8f0;
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .ver-versions-scroll { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+    .ver-version-row { border: 1px solid #2d3b4f; border-radius: 8px; padding: 0.65rem 0.75rem; background: rgba(20,26,34,.55); }
+    .ver-version-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+    .ver-pinned-tag { font-size: 0.72rem; color: #a5b4fc; font-weight: 600; }
+    .pv-req { font-size: 0.78rem; color: #f87171; font-weight: 600; }
+    .pv-valhint { font-size: 0.82rem; color: #94a3b8; margin-top: 0.35rem; }
+    .lib-edit-gate-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .lib-edit-gate-inplace {
+      background: #14532d;
+      color: #bbf7d0;
+      border: 1px solid #166534;
+      padding: 0.45rem 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .lib-edit-gate-inplace:hover { background: #166534; color: #fff; }
+    .lib-edit-gate-newver {
+      background: transparent;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      padding: 0.45rem 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .lib-edit-gate-newver:hover {
+      border-color: #64748b;
+      background: rgba(51, 65, 85, 0.35);
+    }
+    .bank-del-btn {
+      padding: 0.4rem 0.7rem;
+      border-radius: 6px;
+      border: 1px solid #b91c1c;
+      background: rgba(127, 29, 29, 0.4);
+      color: #fecaca;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .bank-del-btn:hover { background: rgba(153, 27, 27, 0.55); color: #fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>题库管理</strong>
+    <span class="row">
+      <a class="btn-back" href="/index.html">← 问卷列表</a>
+    </span>
+  </header>
+
+  <main class="lib-page">
+    <section id="bankListView" class="panel">
+      <h2 style="margin:0 0 .6rem">我的题库</h2>
+      <div class="lib-row" style="margin-bottom:.6rem">
+        <button type="button" class="primary" id="btnShowNewBank">新建题库</button>
+        <button id="btnRefreshBanks" type="button" class="secondary">刷新</button>
+      </div>
+      <div id="bankNewBankPanel" class="hidden" style="margin-bottom:.6rem">
+        <div class="lib-row" style="gap:.5rem;flex-wrap:wrap;align-items:center">
+          <input id="bankTitle" type="text" placeholder="新题库名称" style="flex:1;min-width:200px" />
+          <button id="btnCreateBank" type="button" class="primary">创建</button>
+          <button type="button" class="secondary" id="btnCancelNewBank">取消</button>
+        </div>
+      </div>
+      <div id="bankList"></div>
+    </section>
+
+    <section id="bankDetailView" class="panel hidden">
+      <div class="lib-row" style="justify-content:space-between">
+        <button id="btnBackToBanks" type="button" class="btn-back">← 返回题库列表</button>
+        <button id="btnRefreshBankItems" type="button" class="secondary">刷新详情</button>
+      </div>
+      <h2 id="bankDetailTitle" style="margin:.8rem 0 .6rem">题库详情</h2>
+      <div class="lib-row" style="margin-bottom:.7rem" id="bankCreateRow">
+        <button id="btnOpenCreateInBank" type="button" class="primary">在此题库新建题目</button>
+      </div>
+      <div id="bankItems"></div>
+    </section>
+  </main>
+
+  <div class="modal-overlay" id="renameBankModal" aria-hidden="true">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-header">
+        <h3>重命名题库</h3>
+        <button type="button" class="modal-close" data-close-modal="renameBankModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="renameBankId" value="" />
+        <div class="form-group">
+          <label for="renameBankTitle">题库名称</label>
+          <input type="text" id="renameBankTitle" placeholder="请输入新名称" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="renameBankModal">取消</button>
+        <button type="button" class="btn-toolbar primary" id="btnConfirmRenameBank">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libEditGateModal" aria-hidden="true">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-header">
+        <h3>编辑方式</h3>
+        <button type="button" class="modal-close" data-close-modal="libEditGateModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="libEditGatePendingId" value="" />
+        <div class="lib-edit-gate-actions">
+          <button type="button" class="lib-edit-gate-inplace" id="libEditGateInPlace">修改本版本</button>
+          <button type="button" class="lib-edit-gate-newver" id="libEditGateNewVersion">新建版本</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libQuestionModal" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="libQuestionModalTitle">在题库中新建题目</h3>
+        <button type="button" class="modal-close" data-close-modal="libQuestionModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>题目标题 *</label>
+          <input type="text" id="libQmTitle" placeholder="请输入题目标题" />
+        </div>
+        <div class="form-group">
+          <label>题型</label>
+          <select id="libQmType">
+            <option value="single_choice">单选题</option>
+            <option value="multiple_choice">多选题</option>
+            <option value="text">文本填空</option>
+            <option value="number">数字填空</option>
+          </select>
+        </div>
+        <div class="check-line">
+          <input type="checkbox" id="libQmRequired" />
+          <label for="libQmRequired" style="margin:0">必答</label>
+        </div>
+        <div id="libQmOptionsBlock" class="form-group">
+          <label>选项</label>
+          <div class="option-rows" id="libQmOptionsList"></div>
+          <button type="button" class="btn-toolbar" id="libQmAddOption" style="margin-top:0.4rem">+ 添加选项</button>
+        </div>
+        <div id="libQmValidationBlock" class="validation-block">
+          <h4>校验规则</h4>
+          <div id="libQmValMulti" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最少选</label>
+                <input type="number" id="libQmMinSelect" min="0" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最多选</label>
+                <input type="number" id="libQmMaxSelect" min="0" placeholder="可选" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>精确选几项（留空不限制）</label>
+              <input type="number" id="libQmExactSelect" min="0" placeholder="可选" />
+            </div>
+          </div>
+          <div id="libQmValText" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最少字数</label>
+                <input type="number" id="libQmMinLength" min="0" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最多字数</label>
+                <input type="number" id="libQmMaxLength" min="0" placeholder="可选" />
+              </div>
+            </div>
+          </div>
+          <div id="libQmValNumber" class="hidden">
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>最小值</label>
+                <input type="number" id="libQmMinValue" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label>最大值</label>
+                <input type="number" id="libQmMaxValue" placeholder="可选" />
+              </div>
+            </div>
+            <div class="check-line">
+              <input type="checkbox" id="libQmIntegerOnly" />
+              <label for="libQmIntegerOnly" style="margin:0">必须为整数</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="libQuestionModal">取消</button>
+        <button type="button" class="btn-toolbar primary" id="libQmSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="saveToBankModal" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>保存到题库</h3>
+        <button type="button" class="modal-close" data-close-modal="saveToBankModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="saveToBankLibQuestionId" value="" />
+        <div id="saveToBankBankList" class="bank-check-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="saveToBankModal">取消</button>
+        <button type="button" class="btn-toolbar primary" id="btnConfirmSaveToBank">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="shareModal" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>共享题目</h3>
+        <button type="button" class="modal-close" data-close-modal="shareModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="shareLineageId" />
+        <p class="hint" style="margin-top:0">分享后，对方将能在其共享库中看到该题下的全部历史版本。</p>
+        <div class="form-group">
+          <label>对方用户名</label>
+          <input id="shareUsername" type="text" placeholder="请输入用户名" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="shareModal">取消</button>
+        <button type="button" class="btn-toolbar primary" id="btnConfirmShare">共享</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libVersionsModal" aria-hidden="true">
+    <div class="modal-box preview-wide">
+      <div class="modal-header">
+        <h3>历史版本</h3>
+        <button type="button" class="modal-close" data-close-modal="libVersionsModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" style="margin-top:0">仅预览题干与选项（不展示时间、id）。可选择在本题库详情中固定展示某一版本，或恢复为始终显示最新版；您拥有的版本可删除。</p>
+        <div id="libVersionsBody" class="ver-versions-scroll"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="libVersionsModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libStatsModal" aria-hidden="true">
+    <div class="modal-box preview-wide">
+      <div class="modal-header">
+        <h3>跨问卷统计</h3>
+        <button type="button" class="modal-close" data-close-modal="libStatsModal">&times;</button>
+      </div>
+      <div class="modal-body" id="libStatsModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" id="btnLibStatsExportJson">导出 JSON</button>
+        <button type="button" class="btn-toolbar" id="btnLibStatsExportCsv">导出 CSV</button>
+        <button type="button" class="btn-toolbar" data-close-modal="libStatsModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libUsageModal" aria-hidden="true">
+    <div class="modal-box preview-wide">
+      <div class="modal-header">
+        <h3>题目使用方（我的问卷）</h3>
+        <button type="button" class="modal-close" data-close-modal="libUsageModal">&times;</button>
+      </div>
+      <div class="modal-body" id="libUsageModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="libUsageModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libInfoModal" aria-hidden="true">
+    <div class="modal-box preview-wide">
+      <div class="modal-header">
+        <h3 id="libInfoModalTitle">详情</h3>
+        <button type="button" class="modal-close" data-close-modal="libInfoModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre id="libInfoModalBody" class="lib-info-pre"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-toolbar" data-close-modal="libInfoModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastLib" role="status"></div>
+  <script src="/api.js"></script>
+  <script src="/library.js"></script>
+</body>
+</html>
